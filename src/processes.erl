@@ -16,6 +16,7 @@ max(N) ->
   lists:foreach(fun(Pid) -> Pid ! die end, L),
   U1 = Time1 * 1000 / N,
   U2 = Time2 * 1000 / N,
+  io:format("Total Time: Runtime=~p (wall_clock=~p) microseconds~n", [Time1, Time2]),
   io:format("Process spawn time=~p (~p) microseconds~n", [U1, U2]).
 
 wait() ->
