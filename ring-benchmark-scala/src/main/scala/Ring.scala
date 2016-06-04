@@ -54,7 +54,6 @@ object Ring {
 
     println(s"Done in $time milliseconds. Ring with $n actors, message sent $m times")
 
-//    Thread.sleep(3000)
     ring ! PoisonPill
 
     System.exit(0)

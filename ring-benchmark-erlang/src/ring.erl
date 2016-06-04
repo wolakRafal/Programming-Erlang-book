@@ -19,7 +19,7 @@ benchmark(N, M) ->
 
   receive
     {Last, ring_created} ->
-      io:format("Sending message"),
+      io:format("Sending message~n"),
       Ring ! {message, Ring, Last, M};
     Any ->
       io:format("Wrong message received~p~n", [Any])
@@ -31,15 +31,15 @@ benchmark(N, M) ->
   receive
     done -> ok
   after
-      60000 -> io:format("Timed Out")
+      60000 -> io:format("Timed Out~n")
   end,
   {_, Time1} = statistics(runtime),
   {_, Time2} = statistics(wall_clock),
 %%  lists:foreach(fun(Pid) -> Pid ! die end, L),
-  U1 = Time1 * 1000,
-  U2 = Time2 * 1000,
+%%  U1 = Time1 * 1000,
+%%  U2 = Time2 * 1000,
 
-  io:format("Done in ~p (~p) seconds. Ring with ~p actors, message sent ~p times~n", [Time1, Time2, N, M])
+  io:format("Done in ~p (~p) miliseconds. Ring with ~p actors, message sent ~p times~n", [Time1, Time2, N, M]).
 
 proc() ->
   receive
