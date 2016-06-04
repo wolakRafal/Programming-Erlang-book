@@ -115,11 +115,16 @@ start_workers_monitor(MFA, _N) ->
 %% Write a function that starts and monitors several worker processes.
 %% If any of the worker processes dies abnormally,
 %% kill all the worker processes and restart them all.
-start_workers_all_for_one({M, F, A}, N) ->
-  Group = spawn(fun() -> [spawn_link(M, F, A), spawn_link(M, F, A), spawn_link(M, F, A), spawn_link(M, F, A)] end),
+start_workers_all_for_one(M, F, A, N) ->
+  Group = spawn(fun() ->
+                  [spawn_link(M, F, A) || _ <- lists:seq(1, N)],
+                    receive
+                      die -> ok
+                    end
+                end),
   Ref = monitor(process, Group),
   receive
     {'DOWN', Ref, process, Group, Why} ->
-      io:format("One of the workers die [~p]. Restart them all", [Why]),
-      start_workers_all_for_one({M, F, A}, N)
+      io:format("One of the workers die [~p]. Restart them all~n", [Why]),
+      start_workers_all_for_one(M, F, A, N)
   end.
