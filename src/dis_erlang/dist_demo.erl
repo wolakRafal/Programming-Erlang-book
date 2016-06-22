@@ -2,7 +2,7 @@
 -author("Rafal Wolak").
 
 %% API
--export([]).
+-export([start/1, rpc/4]).
 
 start(Node) ->
   spawn(Node, fun() -> loop() end).
