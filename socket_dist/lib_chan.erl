@@ -101,7 +101,7 @@ do_authentication(Pwd, MM, ArgC, MFA) ->
   send(MM, {challenge, C}),
   receive
     {chan, MM, {response, R}} ->
-      case lib_chan_auth:is_response_corrrect(C, R, Pwd) of
+      case lib_chan_auth:is_response_correct(C, R, Pwd) of
         true ->
           send(MM, ack),
           really_start(MM, ArgC, MFA);
@@ -150,7 +150,7 @@ connect(Host, Port, Service, Secret, ArgC) ->
   end.
 
 connect(Parent, Host, Port) ->
-  case lib_chan_cs:start_new_client(Host, Port, 4) of
+  case lib_chan_cs:start_raw_client(Host, Port, 4) of
     {ok, Socket} ->
       Parent ! {self(), ok},
       lib_chan_mm:loop(Socket, Parent);
@@ -179,7 +179,7 @@ authenticate(MM, Service, Secret, ArgC) ->
     {chan, MM, badService} ->
       wait_close(MM),
       {error, badService};
-    Other ->
+    _Other ->
       {error, badService}
   end.
 

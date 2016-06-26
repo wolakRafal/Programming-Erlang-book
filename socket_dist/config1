@@ -1,3 +1,5 @@
 {port, 2233}.
 {service, math, password, "abc", mfa, mod_math, run, []}.
 {service, kvs, password, "abc", mfa, kvs, start, []}.
+{service, yafs, password, "abc", mfa, yafs, start_server, notUsed}.
+{service, nameServer, password, "abc", mfa, mod_name_server, start_me_up, notUsed}.
