@@ -1,0 +1,4 @@
+io:format("Processing file .erlang~n").
+lib_chan:start_server("config1").
+io:format("{ok, FS}  = lib_chan:connect(localhost, 2233, yafs, \"abc\", notUsed)~n").
+% io:format("lib_chan server started YAFS available at FS~n").

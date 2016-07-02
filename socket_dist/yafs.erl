@@ -22,15 +22,15 @@ loop(MM) ->
     {chan, MM, {put, Name, Bin}} ->
       io:format("Store file ~p ", [Name]),
       file:write_file(Name, Bin),
-      MM ! ok,
+      MM ! {send, ok},
       loop(MM);
     {chan, MM, {dir, Path}} ->
       io:format("Dir of path ~p ", [Path]),
-      MM ! file:list_dir(Path),
+      MM ! {send, (catch file:list_dir(Path))},
       loop(MM);
     {chan, MM, {get, Name}} ->
       io:format("Returning file ~p ", [Name]),
-      MM ! file:read_file(Name),
+      MM ! {send, (catch file:read_file(Name))},
       loop(MM);
     {chan_closed, MM} ->
       true
