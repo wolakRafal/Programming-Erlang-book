@@ -1,7 +1,7 @@
 -module(socket_examples).
 
 %% API
--export([nano_get_url/0, start_nano_server/0, nano_client_eval/1, start_seq_server/0]).
+-export([nano_get_url/0, start_nano_server/0, nano_client_eval/1, start_seq_server/0, start_parallel_server/0]).
 
 nano_get_url()->
     nano_get_url("www.google.com").
@@ -53,6 +53,16 @@ seq_loop(Listen) ->
   {ok, Socket} = gen_tcp:accept(Listen),
   loop(Socket),
   seq_loop(Listen).
+
+%% PARALLEL SERVER
+start_parallel_server() ->
+  {ok, Listen} = gen_tcp:listen(2345, [binary, {packet,4}, {reuseaddr, true}, {active,true}]),
+  spawn(fun() -> par_connect(Listen) end).
+
+par_connect(Listen) ->
+  {ok, Socket} = gen_tcp:accept(Listen),
+  spawn(fun() -> par_connect(Listen) end),
+  loop(Socket).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Client implementation        %%%
