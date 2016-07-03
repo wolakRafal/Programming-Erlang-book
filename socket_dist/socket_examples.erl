@@ -1,7 +1,7 @@
 -module(socket_examples).
 
 %% API
--export([nano_get_url/0, start_nano_server/0, nano_client_eval/1]).
+-export([nano_get_url/0, start_nano_server/0, nano_client_eval/1, start_seq_server/0]).
 
 nano_get_url()->
     nano_get_url("www.google.com").
@@ -21,6 +21,7 @@ receive_data(Socket, SoFar) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Server implementation        %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% ONE REQUEST SERVER
 start_nano_server() ->
   {ok, Listen} = gen_tcp:listen(2345, [binary, {packet, 4},
                                                 {reuseaddr, true},
@@ -42,6 +43,16 @@ loop(Socket) ->
     {tcp_closed, Socket} ->
       io:format("Server socket closed~n")
   end.
+
+%% SEQUENTIAL SERVER
+start_seq_server() ->
+  {ok, Listen} = gen_tcp:listen(2345, [binary, {packet,4}, {reuseaddr, true}, {active,true}]),
+  seq_loop(Listen).
+
+seq_loop(Listen) ->
+  {ok, Socket} = gen_tcp:accept(Listen),
+  loop(Socket),
+  seq_loop(Listen).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Client implementation        %%%
