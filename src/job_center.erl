@@ -31,10 +31,11 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {jobs        :: [],
+-record(state, {jobs        :: [], %% job = {JobNumber :: integer, F :: function , 0|1, worker :: ref()}
                 all_jobs    :: integer(),
                 in_progress :: integer(),
-                done        ::integer()}).
+                done        ::integer(),
+                workers     :: dict()}).
 
 %%%===================================================================
 %%% API
@@ -65,17 +66,20 @@ statistics() ->
 %%%===================================================================
 
 init([]) ->
-  {ok, #state{jobs = [], all_jobs = 0, in_progress = 0, done = 0}}.
+  {ok, #state{jobs = [],
+              all_jobs = 0, in_progress = 0, done = 0,
+              workers = dict:new() %% ref -> JobNumber
+  }}.
 
 handle_call({add_job, F}, _From, State) ->
   JobNumber = erlang:unique_integer([positive, monotonic]),
   NewState = State#state{jobs = [{JobNumber, F, 0} | State#state.jobs], all_jobs = State#state.all_jobs + 1},
   {reply, {ok, JobNumber}, NewState};
 
-handle_call(work_wanted, _From, State) ->
+handle_call(work_wanted, From, State) ->
   JobsLeft = [X || X = {_, _, 0} <- State#state.jobs],
-  Resp = case lists:reverse(JobsLeft) of
-           [] -> no;
+  {Resp, NewState} = case lists:reverse(JobsLeft) of
+           [] -> {no, NewState};
            [{JobNumber, F, 0} | _] -> {JobNumber, F}
          end,
   NewJobs = lists:map(fun ({JobNumber, F , X}) ->
@@ -86,7 +90,7 @@ handle_call(work_wanted, _From, State) ->
                           end
                       end, State#state.jobs),
   NewInProgress = State#state.in_progress + (if JobsLeft == [] -> 0; true -> 1 end),
-  NewState = State#state{jobs = NewJobs, in_progress = NewInProgress},
+  NewState = State#state{jobs = NewJobs, in_progress = NewInProgress, workers = },
   {reply, Resp, NewState};
 
 handle_call({job_done, JobNumber}, _From, State) ->
