@@ -31,11 +31,16 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {jobs        :: [], %% job = {JobNumber :: integer, F :: function , 0|1, worker :: ref()}
+-record(job, { id       :: integer(),  %% JobNumber
+                f       :: fun() ,
+                status  :: free | in_progress | done,
+                worker  :: reference()}).
+
+-record(state, {jobs        :: [],
                 all_jobs    :: integer(),
                 in_progress :: integer(),
-                done        ::integer(),
-                workers     :: dict()}).
+                done        :: integer(),
+                workers     :: any()}).
 
 %%%===================================================================
 %%% API
@@ -48,9 +53,13 @@ add_job(F) ->
   {ok, JobNumber} = gen_server:call(?SERVER, {add_job, F}),
   JobNumber.
 
-%%  returns {JobNumber,F} | no.
+%%  returns {JobNumber, F} | no.
 work_wanted() ->
-  gen_server:call(?SERVER, work_wanted).
+  J = gen_server:call(?SERVER, work_wanted),
+  case J of
+    no -> no;
+    Job -> {Job#job.id, Job#job.f}
+  end.
 
 job_done(JobNumber) ->
   gen_server:call(?SERVER, {job_done, JobNumber}).
@@ -73,36 +82,27 @@ init([]) ->
 
 handle_call({add_job, F}, _From, State) ->
   JobNumber = erlang:unique_integer([positive, monotonic]),
-  NewState = State#state{jobs = [{JobNumber, F, 0} | State#state.jobs], all_jobs = State#state.all_jobs + 1},
+  NewState = State#state{jobs = [#job{id = JobNumber, f = F, status = free} | State#state.jobs], all_jobs = State#state.all_jobs + 1},
   {reply, {ok, JobNumber}, NewState};
 
-handle_call(work_wanted, From, State) ->
-  JobsLeft = [X || X = {_, _, 0} <- State#state.jobs],
-  {Resp, NewState} = case lists:reverse(JobsLeft) of
-           [] -> {no, NewState};
-           [{JobNumber, F, 0} | _] -> {JobNumber, F}
-         end,
-  NewJobs = lists:map(fun ({JobNumber, F , X}) ->
-                          if {JobNumber, F} == Resp ->
-                            {JobNumber, F, 1};
-                          true ->
-                            {JobNumber, F , X}
-                          end
-                      end, State#state.jobs),
-  NewInProgress = State#state.in_progress + (if JobsLeft == [] -> 0; true -> 1 end),
-  NewState = State#state{jobs = NewJobs, in_progress = NewInProgress, workers = },
-  {reply, Resp, NewState};
+handle_call(work_wanted, From, S) ->
+  Job = get_free_job(S#state.jobs),
+  NewJobs = mark_job_in_progress(Job, S#state.jobs),
+  NewInProgress = S#state.in_progress + (if Job == no -> 0; true -> 1 end),
+  NewState = S#state{jobs = NewJobs, in_progress = NewInProgress, workers = dict:append(From, Job, S#state.workers)},
+  {reply, Job, NewState};
 
-handle_call({job_done, JobNumber}, _From, State) ->
-  Completed = [X || X = {JobN, _, 1} <- State#state.jobs, JobN == JobNumber],
+handle_call({job_done, JobNumber}, From, S) ->
+  Completed = [X || X <- S#state.jobs, X#job.id == JobNumber, X#job.status == in_progress],
   {Response, NewJobs} = case Completed of
-                        [E] -> {ok, lists:delete(E, State#state.jobs)};
-                        [] -> {{error, bad_job_number}, State#state.jobs}
+                        [E] -> {ok, lists:delete(E, S#state.jobs)};
+                        [] -> {{error, bad_job_number}, S#state.jobs}
                     end,
   Done = (if Response == {error, bad_job_number} -> 0; true -> 1 end),
-  NewDone = State#state.done + Done,
-  NeInProgress = State#state.in_progress - Done,
-  {reply, Response, State#state{jobs = NewJobs, in_progress = NeInProgress, done = NewDone}};
+  NewDone = S#state.done + Done,
+  NeInProgress = S#state.in_progress - Done,
+  NewWorkers = dict:erase(From, S#state.workers),
+  {reply, Response, S#state{jobs = NewJobs, in_progress = NeInProgress, done = NewDone, workers = NewWorkers}};
 
 handle_call(stats, _From, S) ->
   Response = {{all_jobs, S#state.all_jobs} , {in_progress, S#state.in_progress}, {done, S#state.done}},
@@ -120,6 +120,29 @@ terminate(_Reason, _State) -> ok.
 
 code_change(_OldVsn, State, _Extra) -> {ok, State}.
 
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
+%% Gets free jobs from list Jobs
+%% returns job() | no
+get_free_job(Jobs) ->
+  JobsLeft = [X || X <- Jobs, X#job.status == free],
+  case lists:reverse(JobsLeft) of
+    [] -> no;
+    [J | _] -> J
+  end.
+
+mark_job_in_progress(J, Jobs) when is_record(J, job) ->
+  lists:map(fun (Job) ->
+                    if J == Job ->
+                        J#job{status = in_progress};
+                      true ->
+                        Job %% return as it is
+                    end
+            end,
+    Jobs);
+
+mark_job_in_progress(_, Jobs) -> Jobs.
 %%%===================================================================
 %%% TESTS
 %%%===================================================================
