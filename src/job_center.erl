@@ -19,7 +19,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, add_job/1, work_wanted/0, job_done/1, test_server/0, statistics/0]).
+-export([start_link/0, add_job/1, work_wanted/0, job_done/1, test_server/0, statistics/0, stop/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -49,6 +49,9 @@
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+stop() ->
+  gen_server:stop(?SERVER).
+
 add_job(F) ->
   {ok, JobNumber} = gen_server:call(?SERVER, {add_job, F}),
   JobNumber.
@@ -70,6 +73,7 @@ job_done(JobNumber) ->
 statistics() ->
   gen_server:call(?SERVER, stats).
 
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -85,14 +89,16 @@ handle_call({add_job, F}, _From, State) ->
   NewState = State#state{jobs = [#job{id = JobNumber, f = F, status = free} | State#state.jobs], all_jobs = State#state.all_jobs + 1},
   {reply, {ok, JobNumber}, NewState};
 
-handle_call(work_wanted, From, S) ->
+handle_call(work_wanted, {Pid, _Tag} = _From, S) ->
   Job = get_free_job(S#state.jobs),
-  NewJobs = mark_job_in_progress(Job, S#state.jobs),
+  %% if we have free job give it to worker and monitor him
+  monitor(process, Pid),
+  NewJobs = set_state(Job, S#state.jobs, in_progress),
   NewInProgress = S#state.in_progress + (if Job == no -> 0; true -> 1 end),
-  NewState = S#state{jobs = NewJobs, in_progress = NewInProgress, workers = dict:append(From, Job, S#state.workers)},
+  NewState = S#state{jobs = NewJobs, in_progress = NewInProgress, workers = dict:store(Pid, Job, S#state.workers)},
   {reply, Job, NewState};
 
-handle_call({job_done, JobNumber}, From, S) ->
+handle_call({job_done, JobNumber}, {Pid, _Tag} = _From, S) ->
   Completed = [X || X <- S#state.jobs, X#job.id == JobNumber, X#job.status == in_progress],
   {Response, NewJobs} = case Completed of
                         [E] -> {ok, lists:delete(E, S#state.jobs)};
@@ -101,7 +107,7 @@ handle_call({job_done, JobNumber}, From, S) ->
   Done = (if Response == {error, bad_job_number} -> 0; true -> 1 end),
   NewDone = S#state.done + Done,
   NeInProgress = S#state.in_progress - Done,
-  NewWorkers = dict:erase(From, S#state.workers),
+  NewWorkers = dict:erase(Pid, S#state.workers),
   {reply, Response, S#state{jobs = NewJobs, in_progress = NeInProgress, done = NewDone, workers = NewWorkers}};
 
 handle_call(stats, _From, S) ->
@@ -114,7 +120,16 @@ handle_call(Request, From, State) ->
 
 handle_cast(_Request, State) ->  {noreply, State}.
 
-handle_info(_Info, State) ->  {noreply, State}.
+handle_info({'DOWN', _Ref, _Type, Pid, Reason}, S) ->
+  Job = dict:fetch(Pid, S#state.workers),
+  NewWorkers = dict:erase(Pid, S#state.workers),
+  NewJobs = set_state(Job, S#state.jobs, free),
+  io:format("Worker ~p died because of ~p, returning his work to pool ~p ~n", [Pid, Reason, Job]),
+  {noreply, S#state{jobs = NewJobs, in_progress = S#state.in_progress - 1, workers = NewWorkers}};
+
+handle_info(Info, State) ->
+  io:format("Unexpected Handle Info message ~p ~n", [Info]),
+  {noreply, State}.
 
 terminate(_Reason, _State) -> ok.
 
@@ -132,17 +147,19 @@ get_free_job(Jobs) ->
     [J | _] -> J
   end.
 
-mark_job_in_progress(J, Jobs) when is_record(J, job) ->
+%% marks job J in list of Jobs with state = Tag :: free | in_progress | done
+set_state(J, Jobs, Tag) when is_record(J, job) ->
   lists:map(fun (Job) ->
                     if J == Job ->
-                        J#job{status = in_progress};
+                        J#job{status = Tag};
                       true ->
                         Job %% return as it is
                     end
             end,
     Jobs);
 
-mark_job_in_progress(_, Jobs) -> Jobs.
+set_state(_J, Jobs, _Tag) -> Jobs.
+
 %%%===================================================================
 %%% TESTS
 %%%===================================================================
@@ -173,9 +190,33 @@ test_server() ->
   no = job_center:work_wanted(),
   job_center:add_job(fun () -> io:format("Job number 4~n") end),
   {{all_jobs, 4}, {in_progress, 0}, {done, 3}} = job_center:statistics(),
-  io:format("SUCCESS~n"),
+  io:format("SUCCESS Basic tests~n"),
+  job_center:stop(),
+  test_monitor_workers(),
+  io:format("SUCCESS Monitoring Workers ~n"),
   done.
 
-
-
+test_monitor_workers() ->
+  job_center:start_link(),
+  J1 = job_center:add_job(fun () -> io:format("Job number 1~n") end),
+  J2 = job_center:add_job(fun () -> io:format("Job number 2~n") end),
+  io:format("Job statistics: ~p ~n", [job_center:statistics()]),
+  W1 = spawn(fun () ->
+                  io:format(" Worker with alcohol problems started. Will never finish his work. Because he is always drunk. May die. ~n"),
+                  job_center:work_wanted(),
+                  receive
+                    vodka ->
+                      io:format("Thnak you for vodka~n"),
+                      exit("Im drunk")
+                  end
+             end),
+  timer:sleep(200),
+  io:format("Job statistics before workere die: ~p ~n", [job_center:statistics()]),
+  {{all_jobs, 2}, {in_progress, 1}, {done, 0}} = job_center:statistics(),
+  W1 ! vodka,
+  io:format("Job statistics after worker die: ~p ~n", [job_center:statistics()]),
+  timer:sleep(200),
+  {{all_jobs, 2}, {in_progress, 0}, {done, 0}} = job_center:statistics(),
+  job_center:stop(),
+  done.
 
