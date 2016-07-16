@@ -19,7 +19,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, add_job/1, work_wanted/0, job_done/1, test_server/0, statistics/0, stop/0]).
+-export([start_link/0, add_job/1, work_wanted/0, job_done/1, test_server/0, statistics/0, stop/0, test_lazy_workers/0]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -36,8 +36,8 @@
                 status  :: free | in_progress | done,
                 worker  :: reference(),
                 time    :: integer() , %% time in seconds to complete the job by worker, default=0
-                hurry_up_timer   :: tref(),  %% timer ref to hurry_up
-                timer   :: tref()            %% Timer reference for work expiration
+                hurry_up_timer   :: timer:tref(),  %% timer ref to hurry_up
+                timer   :: timer:tref()            %% Timer reference for work expiration
 }).
 
 -record(state, {jobs        :: [],
@@ -101,15 +101,15 @@ handle_call(work_wanted, {WorkerPid, _Tag} = _From, S) ->
       {reply, no, S};
     Job ->
       Time = get_time_for_job(),
-      HurryUpTimeRef = erlang:send_after(Time - 1, WorkerPid, hurry_up),
-      ExpirationTimeRef = erlang:send_after(Time + 1, self(), {work_expired, WorkerPid, Job#job.id}),
+      HurryUpTimeRef = erlang:send_after(Time - 1000, WorkerPid, hurry_up),
+      ExpirationTimeRef = erlang:send_after(Time + 1000, self(), {work_expired, WorkerPid, Job#job.id}),
       NewJob = Job#job{status = in_progress, time = Time, hurry_up_timer = HurryUpTimeRef, timer = ExpirationTimeRef},
       %% if we have free job give it to worker and monitor him
       monitor(process, WorkerPid),
       NewJobs = replace_job(NewJob, S#state.jobs),
-      NewInProgress = S#state.in_progress + (if Job == no -> 0; true -> 1 end),
-      NewState = S#state{jobs = NewJobs, in_progress = NewInProgress, workers = dict:store(WorkerPid, Job, S#state.workers)},
-      {reply, Job, NewState}
+      NewInProgress = S#state.in_progress + 1,
+      NewState = S#state{jobs = NewJobs, in_progress = NewInProgress, workers = dict:store(WorkerPid, NewJob, S#state.workers)},
+      {reply, NewJob, NewState}
   end;
 
 handle_call({job_done, JobNumber}, {Pid, _Tag} = _From, S) ->
@@ -182,8 +182,8 @@ replace_job(NewJob, Jobs) when is_record(NewJob, job) ->
             end,
     Jobs).
 
-%% in seconds
-get_time_for_job() -> 3.
+%% in milis
+get_time_for_job() -> 3000.
 
 %%%===================================================================
 %%% TESTS
@@ -219,6 +219,8 @@ test_server() ->
   job_center:stop(),
   test_monitor_workers(),
   io:format("SUCCESS Monitoring Workers ~n"),
+  test_lazy_workers(),
+  io:format("SUCCESS Lazy Workers tests ~n"),
   done.
 
 test_monitor_workers() ->
@@ -239,9 +241,31 @@ test_monitor_workers() ->
   io:format("Job statistics before workere die: ~p ~n", [job_center:statistics()]),
   {{all_jobs, 2}, {in_progress, 1}, {done, 0}} = job_center:statistics(),
   W1 ! vodka,
-  io:format("Job statistics after worker die: ~p ~n", [job_center:statistics()]),
   timer:sleep(200),
+  io:format("Job statistics after worker die: ~p ~n", [job_center:statistics()]),
   {{all_jobs, 2}, {in_progress, 0}, {done, 0}} = job_center:statistics(),
   job_center:stop(),
   done.
 
+
+%% Check for lazy workers; these are workers that accept jobs but don’t deliver on time.
+test_lazy_workers()->
+  job_center:start_link(),
+  _J1 = job_center:add_job(fun () -> io:format("Job number 1~n") end),
+  _W1 = spawn(fun () ->
+                io:format(" Lazy Worker started. ~n"),
+                job_center:work_wanted(),
+                lazy_worker_loop()
+             end),
+  timer:sleep(5000),
+  io:format("Job statistics after lazy worker was fired: ~p ~n", [job_center:statistics()]),
+  {{all_jobs, 1}, {in_progress, 0}, {done, 0}} = job_center:statistics(),
+  job_center:stop(),
+  done.
+
+lazy_worker_loop() ->
+  receive
+    hurry_up ->
+      io:format("Received Hurry up message ~n"),
+      lazy_worker_loop()
+  end.
