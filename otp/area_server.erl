@@ -35,4 +35,4 @@ code_change(_OldVsn, N, _Extra) -> {ok, N}.
 
 compute_area({square, X}) -> X*X;
 
-compute_area({rectongle, X, Y}) -> X*Y.
+compute_area({rectangle, X, Y}) -> X*Y.

@@ -36,7 +36,7 @@ start_auth_server(C, {{Mod,Func,ArgsS}, Secret}) ->
 	    C ! {msg, auth},
 	    apply(Mod, Func, [C, ArgsS]);
 	_ ->
-	    Ran =lib_primes:make_random_int(20),
+	    Ran = lib_primes:make_random_int(20),
 	    C ! {msg, {challenge, Ran}},
 	    receive
 		{msg, {response, R}} ->
