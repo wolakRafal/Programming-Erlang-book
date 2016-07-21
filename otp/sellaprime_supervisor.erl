@@ -46,7 +46,10 @@ init([]) ->
   PrimeServer = {tag2, {prime_server, start_link, []},
     Restart, Shutdown, Type, [prime_server]},
 
-  {ok, {SupFlags, [AreaServer, PrimeServer]}}.
+  PrimeTesterServer = {tag3, {prime_tester_server, start_link, []},
+    Restart, Shutdown, Type, [prime_tester_server]},
+
+  {ok, {SupFlags, [AreaServer, PrimeServer, PrimeTesterServer]}}.
 
 %%%===================================================================
 %%% Internal functions
