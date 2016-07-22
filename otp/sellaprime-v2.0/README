@@ -1,0 +1,44 @@
+We start the system with the following commands:
+$ erl -boot start_sasl -config elog4.config
+application:start(sellaprime).
+
+
+------ version 2.0 ------
+2. Make a pool of ten prime tester servers. Make a queue server that queues
+requests until one of the prime tester servers become free. When a prime
+tester server becomes free, send it a request to test a number for primality.
+---------------------------
+
+
+----- BOOT TEST PROCEDURE ROUTINE ------
+$ erl -boot start_sasl -config elog3
+1> application:loaded_applications().
+[{kernel,"ERTS CXC 138 10","2.16.1"},
+{sasl,"SASL CXC 138 11","2.3.1"},
+{stdlib,"ERTS CXC 138 10","1.19.1"}]
+2> application:load(sellaprime).
+ok
+3> application:loaded_applications().
+[{sellaprime,"The Prime Number Shop","1.0"},
+{kernel,"ERTS CXC 138 10","2.16.1"},
+{sasl,"SASL CXC 138 11","2.3.1"},
+{stdlib,"ERTS CXC 138 10","1.19.1"}]
+4> application:start(sellaprime).
+*** my_alarm_handler init:{xyz,{alarm_handler,[]}}
+area_server starting
+prime_server starting
+ok
+5> application:stop(sellaprime).
+prime_server stopping
+area_server stopping
+=INFO REPORT==== 26-May-2013::14:16:57 ===
+application: sellaprime
+exited: stopped
+type: temporary
+ok
+6> application:unload(sellaprime).
+ok
+7> application:loaded_applications().
+[{kernel,"ERTS CXC 138 10","2.16.1"},
+{sasl,"SASL CXC 138 11","2.3.1"},
+{stdlib,"ERTS CXC 138 10","1.19.1"}]

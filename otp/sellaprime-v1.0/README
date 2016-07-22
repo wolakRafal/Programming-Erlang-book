@@ -1,0 +1,45 @@
+We start the system with the following commands:
+$ erl -boot start_sasl -config elog4.config
+application:start(sellaprime).
+
+
+------ version 1.0 ------
+1. Make a gen_server called prime_tester_server that tests if a given number is
+prime. You can use the is_prime/2 function in lib_primes.erl to do this (or
+implement a better prime number tester yourself). Add this to the supervisor
+tree in sellaprime_supervisor.erl.
+---------------------------
+
+
+----- BOOT TEST PROCEDURE ROUTINE ------
+$ erl -boot start_sasl -config elog3
+1> application:loaded_applications().
+[{kernel,"ERTS CXC 138 10","2.16.1"},
+{sasl,"SASL CXC 138 11","2.3.1"},
+{stdlib,"ERTS CXC 138 10","1.19.1"}]
+2> application:load(sellaprime).
+ok
+3> application:loaded_applications().
+[{sellaprime,"The Prime Number Shop","1.0"},
+{kernel,"ERTS CXC 138 10","2.16.1"},
+{sasl,"SASL CXC 138 11","2.3.1"},
+{stdlib,"ERTS CXC 138 10","1.19.1"}]
+4> application:start(sellaprime).
+*** my_alarm_handler init:{xyz,{alarm_handler,[]}}
+area_server starting
+prime_server starting
+ok
+5> application:stop(sellaprime).
+prime_server stopping
+area_server stopping
+=INFO REPORT==== 26-May-2013::14:16:57 ===
+application: sellaprime
+exited: stopped
+type: temporary
+ok
+6> application:unload(sellaprime).
+ok
+7> application:loaded_applications().
+[{kernel,"ERTS CXC 138 10","2.16.1"},
+{sasl,"SASL CXC 138 11","2.3.1"},
+{stdlib,"ERTS CXC 138 10","1.19.1"}]
