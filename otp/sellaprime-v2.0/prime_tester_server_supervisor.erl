@@ -33,6 +33,6 @@ init([{noWorkers, N}]) ->
   Restart = permanent,
   Shutdown = 1000,
   Type = worker,
-  Workers = [{list_to_atom("prime_tester_worker" ++ integer_to_list(X)) , {prime_tester_server, start_link, []},
+  Workers = [{list_to_atom("prime_tester_worker" ++ integer_to_list(X)) , {prime_tester_server, start_link, [integer_to_list(X)]},
               Restart, Shutdown, Type, [prime_tester_server]} || X <- lists:seq(1, N)],
   {ok, {SupFlags, Workers}}.
