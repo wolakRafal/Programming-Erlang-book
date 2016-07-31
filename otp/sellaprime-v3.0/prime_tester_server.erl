@@ -22,7 +22,7 @@
   terminate/2,
   code_change/3]).
 
--define(SERVER, queue_server). % now points to queue_server
+-define(SERVER, load_balancer). % now points to load_balancer
 
 %%%===================================================================
 %%% API
@@ -39,7 +39,7 @@ is_prime(P) ->
     Resp ->
       Resp
     after 1000*60 -> %% one minute
-      io:format("Server Busy. State of queue_server ~p ~n", [queue_server:get_state()]),
+      io:format("Server Busy. State of load_balancer  ~p ~n", [load_balancer:get_state()]),
       server_busy
   end.
 
@@ -48,21 +48,19 @@ is_prime(P) ->
 %%%===================================================================
 init([]) ->
   io:format("prime_tester_server worker starting~n"),
-  ?SERVER ! {work_wanted , self()},
+  ?SERVER ! {im_ready , self()},
   {ok, 0}.
 
-handle_call({job, F, Arg}, _From, N) ->
-  {reply, F(Arg), N + 1};
-
-handle_call(_Request, _From, State) -> {reply, ok, State}.
+handle_call(_Request, _From, N) ->
+  {reply, ok, N + 1}.
 
 handle_cast(_Request, N) ->
   {noreply, N + 1}.
 
-handle_info({job, F, Arg, Pid}, N) ->
-%%  timer:sleep(300), delay responses for tests
-  Pid ! F(Arg),
-  queue_server ! {work_wanted, self()},
+handle_info({is_prime, P, From}, N) ->
+  timer:sleep(300), %% delay for tests
+  From ! (catch lib_primes:is_prime(P)),
+  load_balancer ! {job_done, self()},
   {noreply, N + 1};
 
 handle_info(_Info, State) ->  {noreply, State}.
@@ -77,15 +75,16 @@ code_change(_OldVsn, State, _Extra) ->  {ok, State}.
 %%%===================================================================
 %%% Tests
 %%%===================================================================
-%%%    2> prime_tester_server:tests().
+%% prime_tester_server:tests().
 tests() ->
   application:start(sellaprime),
   receive
   after 300 -> ok end,
-  {state, [], ActiveWorkers} = queue_server:get_state(),
-  10 = length(ActiveWorkers),
-  [spawn(fun () -> prime_tester_server:is_prime(X)end) || X <- lists:seq(1,10)],
-  prime_tester_server:is_prime(5555),
-  [spawn(fun () -> prime_tester_server:is_prime(X)end) || X <- lists:seq(11,15)],
-  prime_tester_server:is_prime(777777),
+  {state, State=Workers} = load_balancer:get_state(),
+  io:format("State:~p~n", [State]),
+  10 = maps:size(Workers),
+  [spawn( fun () -> prime_tester_server:is_prime(X) end) || X <- lists:seq(1,10)],
+  timer:sleep(100),
+  {state, S1=_W1} = load_balancer:get_state(),
+  io:format("State:~p~n", [S1]),
   pass.

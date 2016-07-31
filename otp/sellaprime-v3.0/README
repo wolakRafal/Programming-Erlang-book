@@ -1,0 +1,12 @@
+start the system:
+$ erl -boot start_sasl -config elog4.config
+application:start(sellaprime).
+
+
+------ version 3.0 ------
+3. Change the code in the prime server testers so that each prime server tester maintains its own queue of requests.
+Remove the queue server.
+Write a load balancer that keeps track of the work being done and requests to be done by the prime server testers.
+Requests to test new primes should now be sent to the load balancer.
+Arrange that the load balancer sends requests to the least loaded server.
+---------------------------

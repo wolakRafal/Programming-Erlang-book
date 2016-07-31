@@ -68,6 +68,8 @@ handle_info({work_wanted, From}, S) ->
       {noreply, S#state{tasks = Tail}}
   end;
 
+
+%% TODO: handle EXIT signals from workers
 handle_info(Other, State) ->
   error_logger:error_msg("*** queue_server receive unknow message ~p ~n", [Other]),
   {noreply, State}.
