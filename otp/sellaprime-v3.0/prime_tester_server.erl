@@ -23,6 +23,7 @@
   code_change/3]).
 
 -define(SERVER, load_balancer). % now points to load_balancer
+-define(MAGIC_NUMBER, 28376591248).
 
 %%%===================================================================
 %%% API
@@ -57,6 +58,10 @@ handle_call(_Request, _From, N) ->
 handle_cast(_Request, N) ->
   {noreply, N + 1}.
 
+%% Blows away process - for tests
+handle_info({is_prime, ?MAGIC_NUMBER, _From}, _N) ->
+  exit(buuum);
+
 handle_info({is_prime, P, From}, N) ->
   timer:sleep(300), %% delay for tests
   From ! (catch lib_primes:is_prime(P)),
@@ -77,14 +82,40 @@ code_change(_OldVsn, State, _Extra) ->  {ok, State}.
 %%%===================================================================
 %% prime_tester_server:tests().
 tests() ->
+  io:format("SELLAPRIME v3.0 TESTS STARTING~n"),
   application:start(sellaprime),
   receive
   after 300 -> ok end,
-  {state, State=Workers} = load_balancer:get_state(),
-  io:format("State:~p~n", [State]),
+  {state, Workers} = load_balancer:get_state(),
+%%  io:format("State:~p~n", [State]),
   10 = maps:size(Workers),
   [spawn( fun () -> prime_tester_server:is_prime(X) end) || X <- lists:seq(1,10)],
   timer:sleep(100),
-  {state, S1=_W1} = load_balancer:get_state(),
-  io:format("State:~p~n", [S1]),
+  {state, S1} = load_balancer:get_state(),
+%%  io:format("State:~p~n", [S1]),
+  10 = length([X || {X, {worker, X, 1}} <- maps:to_list(S1)]),
+
+  [spawn( fun () -> prime_tester_server:is_prime(X) end) || X <- lists:seq(1,5)],
+  timer:sleep(50),
+  {state, S2} = load_balancer:get_state(),
+%%  io:format("State2:~p~n", [S2]),
+  5 = length([X || {X, {worker, X, 2}} <- maps:to_list(S2)]),
+  timer:sleep(400), % all workers should complete work
+  pass = crash_test(),
+  io:format("SELLAPRIME v3.0 TESTS FINISHED SUCCESSFULLY~n"),
+  pass.
+
+
+crash_test() ->
+  io:format("Crash tests starting~n"),
+  [spawn( fun () -> prime_tester_server:is_prime(X) end) || X <- lists:seq(1,40)],
+  timer:sleep(100),
+  {state, S1} = load_balancer:get_state(),
+  io:format("State befor crash:~p~n", [S1]),
+  10 = length([X || {X, {worker, X, 4}} <- maps:to_list(S1)]),
+  spawn(fun () -> prime_tester_server:is_prime(?MAGIC_NUMBER)end), %% This will blow one worker
+  timer:sleep(100),
+  {state, S2} = load_balancer:get_state(),
+  9 = length([X || {X, {worker, X, 4}} <- maps:to_list(S2)]),
+%%  io:format("State:~p~n", [S1]),
   pass.

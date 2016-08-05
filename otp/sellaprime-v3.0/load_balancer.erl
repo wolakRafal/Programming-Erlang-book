@@ -60,6 +60,7 @@ handle_call(_Request, _From, State) ->
 
 handle_cast(Job = {is_prime, _P, _From}, S) ->
   W = getLeastLoadedWorker(S),
+%%  io:format("From list ~p I've picked ~p ~n ", [S#state.workers, W]),
   Pid = W#worker.pid,
   Pid ! Job,
   NewWorker = W#worker{load = W#worker.load + 1},
@@ -70,14 +71,20 @@ handle_cast(_Request, State) -> {noreply, State}.
 
 handle_info({im_ready, Pid}, S) ->
   io:format("register worker ~p~n", [Pid]),
+  monitor(process, Pid),
   {noreply, S#state{workers = maps:put(Pid, #worker{pid = Pid, load = 0}, S#state.workers)}};
 
 handle_info({job_done, Pid}, S) ->
-  io:format("Worker ~p done his job ~n", [Pid]),
+%%  io:format("Worker ~p done his job ~n", [Pid]),
   {noreply, S#state{workers = reduceLoad(Pid, S#state.workers)}};
 
 
-%% TODO: handle EXIT signals from workers
+%%  handle EXIT signals from workers
+handle_info({'DOWN', _Ref, process, Pid, Reason}, S) ->
+  error_logger:error_msg("Worker ~p died. Reason:~p. Remove from registry ~n", [Pid, Reason]),
+  NewState = S#state{workers = maps:remove(Pid, S#state.workers)},
+  {noreply, NewState};
+
 handle_info(Other, S) ->
   error_logger:error_msg("Received unknow message~p~n", [Other]),
   {noreply, S}.
@@ -90,19 +97,18 @@ code_change(_OldVsn, State, _Extra) -> {ok, State}.
 %%% Internal functions
 %%%===================================================================
 %% returns least loaded worker
-%% TODO fix this method
 getLeastLoadedWorker(S) when is_record(S, state) ->
   Map = S#state.workers,
   maps:fold(fun(_K, V={worker, _, Load}, Acc={worker, _ , MaxLoad}) ->
               if
-                Load < MaxLoad ->
-                  Acc;
+                Load =< MaxLoad ->
+                  V;
                 true ->
-                  V
+                  Acc
               end
             end, hd(maps:values(Map)), Map).
 
 reduceLoad(Pid, Workers) when is_map(Workers) ->
   W = maps:get(Pid, Workers),
-  NewWorker = W#worker{load = W#worker.load + 1 },
+  NewWorker = W#worker{load = W#worker.load - 1 },
   maps:update(Pid, NewWorker, Workers).
