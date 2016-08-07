@@ -1,0 +1,9 @@
+start the system:
+$ erl -boot start_sasl -config elog4.config
+application:start(sellaprime).
+
+
+------ version 4.0 ------
+4. Implement a supervisor hierarchy so that if any prime number tester server crashes, it should be restarted.
+    If the load balancer crashes, crash all the prime number tester servers and restart everything.
+---------------------------
