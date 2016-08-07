@@ -1,0 +1,110 @@
+1> prime_tester_server:tests().
+SELLAPRIME v4.0 TESTS STARTING
+*** my_alarm_handler init:{xyz,{alarm_handler,[]}}
+area_server starting
+prime_server starting
+load_balancer server starting
+load_balancer create 3 workers
+start_link
+prime_tester_server worker starting
+start_link
+prime_tester_server worker starting
+start_link
+prime_tester_server worker starting
+register worker <0.52.0>
+register worker <0.53.0>
+register worker <0.54.0>
+<0.54.0> Received {#Ref<0.0.8.76>,{is_prime,1,<0.55.0>}}
+<0.53.0> Received {#Ref<0.0.8.77>,{is_prime,2,<0.56.0>}}
+<0.52.0> Received {#Ref<0.0.8.78>,{is_prime,3,<0.57.0>}}
+State:#{<0.52.0> => {worker,<0.52.0>,[{#Ref<0.0.8.78>,{is_prime,3,<0.57.0>}}]},
+        <0.53.0> => {worker,<0.53.0>,[{#Ref<0.0.8.77>,{is_prime,2,<0.56.0>}}]},
+        <0.54.0> => {worker,<0.54.0>,[{#Ref<0.0.8.76>,{is_prime,1,<0.55.0>}}]}}
+<0.54.0> job_done {#Ref<0.0.8.76>,{is_prime,1,<0.55.0>}}
+<0.53.0> job_done {#Ref<0.0.8.77>,{is_prime,2,<0.56.0>}}
+<0.52.0> job_done {#Ref<0.0.8.78>,{is_prime,3,<0.57.0>}}
+<0.54.0> Received {#Ref<0.0.8.84>,{is_prime,1,<0.58.0>}}
+<0.53.0> Received {#Ref<0.0.8.85>,{is_prime,2,<0.59.0>}}
+Crash tests starting
+<0.52.0> Received {#Ref<0.0.8.93>,{is_prime,1,<0.60.0>}}
+<0.54.0> job_done {#Ref<0.0.8.84>,{is_prime,1,<0.58.0>}}
+<0.53.0> job_done {#Ref<0.0.8.85>,{is_prime,2,<0.59.0>}}
+<0.54.0> Received {#Ref<0.0.8.94>,{is_prime,2,<0.61.0>}}
+<0.53.0> Received {#Ref<0.0.8.95>,{is_prime,3,<0.62.0>}}
+State befor crash:#{<0.52.0> => {worker,<0.52.0>,
+                            [{#Ref<0.0.8.102>,{is_prime,10,<0.69.0>}},
+                             {#Ref<0.0.8.99>,{is_prime,7,<0.66.0>}},
+                             {#Ref<0.0.8.96>,{is_prime,4,<0.63.0>}},
+                             {#Ref<0.0.8.93>,{is_prime,1,<0.60.0>}}]},
+                    <0.53.0> => {worker,<0.53.0>,
+                            [{#Ref<0.0.8.104>,{is_prime,12,<0.71.0>}},
+                             {#Ref<0.0.8.101>,{is_prime,9,<0.68.0>}},
+                             {#Ref<0.0.8.98>,{is_prime,6,<0.65.0>}},
+                             {#Ref<0.0.8.95>,{is_prime,3,<0.62.0>}}]},
+                    <0.54.0> => {worker,<0.54.0>,
+                            [{#Ref<0.0.8.103>,{is_prime,11,<0.70.0>}},
+                             {#Ref<0.0.8.100>,{is_prime,8,<0.67.0>}},
+                             {#Ref<0.0.8.97>,{is_prime,5,<0.64.0>}},
+                             {#Ref<0.0.8.94>,{is_prime,2,<0.61.0>}}]}}
+<0.52.0> job_done {#Ref<0.0.8.93>,{is_prime,1,<0.60.0>}}
+<0.52.0> Received {#Ref<0.0.8.96>,{is_prime,4,<0.63.0>}}
+<0.54.0> job_done {#Ref<0.0.8.94>,{is_prime,2,<0.61.0>}}
+<0.53.0> job_done {#Ref<0.0.8.95>,{is_prime,3,<0.62.0>}}
+<0.54.0> Received {#Ref<0.0.8.97>,{is_prime,5,<0.64.0>}}
+<0.53.0> Received {#Ref<0.0.8.98>,{is_prime,6,<0.65.0>}}
+State 2:#{<0.52.0> => {worker,<0.52.0>,
+                  [{#Ref<0.0.8.102>,{is_prime,10,<0.69.0>}},
+                   {#Ref<0.0.8.99>,{is_prime,7,<0.66.0>}},
+                   {#Ref<0.0.8.96>,{is_prime,4,<0.63.0>}}]},
+          <0.53.0> => {worker,<0.53.0>,
+                  [{#Ref<0.0.8.104>,{is_prime,12,<0.71.0>}},
+                   {#Ref<0.0.8.101>,{is_prime,9,<0.68.0>}},
+                   {#Ref<0.0.8.98>,{is_prime,6,<0.65.0>}}]},
+          <0.54.0> => {worker,<0.54.0>,
+                  [{#Ref<0.0.8.112>,{is_prime,28376591248,<0.72.0>}},
+                   {#Ref<0.0.8.103>,{is_prime,11,<0.70.0>}},
+                   {#Ref<0.0.8.100>,{is_prime,8,<0.67.0>}},
+                   {#Ref<0.0.8.97>,{is_prime,5,<0.64.0>}}]}}
+SELLAPRIME v4.0 TESTS FINISHED SUCCESSFULLY
+Following errors are expected.
+pass
+2>
+2> <0.52.0> job_done {#Ref<0.0.8.96>,{is_prime,4,<0.63.0>}}
+<0.52.0> Received {#Ref<0.0.8.99>,{is_prime,7,<0.66.0>}}
+<0.54.0> job_done {#Ref<0.0.8.97>,{is_prime,5,<0.64.0>}}
+<0.53.0> job_done {#Ref<0.0.8.98>,{is_prime,6,<0.65.0>}}
+<0.54.0> Received {#Ref<0.0.8.100>,{is_prime,8,<0.67.0>}}
+<0.53.0> Received {#Ref<0.0.8.101>,{is_prime,9,<0.68.0>}}
+<0.52.0> job_done {#Ref<0.0.8.99>,{is_prime,7,<0.66.0>}}
+<0.52.0> Received {#Ref<0.0.8.102>,{is_prime,10,<0.69.0>}}
+<0.54.0> job_done {#Ref<0.0.8.100>,{is_prime,8,<0.67.0>}}
+<0.53.0> job_done {#Ref<0.0.8.101>,{is_prime,9,<0.68.0>}}
+<0.54.0> Received {#Ref<0.0.8.103>,{is_prime,11,<0.70.0>}}
+<0.53.0> Received {#Ref<0.0.8.104>,{is_prime,12,<0.71.0>}}
+<0.52.0> job_done {#Ref<0.0.8.102>,{is_prime,10,<0.69.0>}}
+<0.53.0> job_done {#Ref<0.0.8.104>,{is_prime,12,<0.71.0>}}
+<0.54.0> job_done {#Ref<0.0.8.103>,{is_prime,11,<0.70.0>}}
+start_link
+prime_tester_server worker starting
+register worker <0.74.0>
+
+=ERROR REPORT==== 7-Aug-2016::21:18:43 ===
+** Generic server 'Worker_3' terminating
+** Last message in was {#Ref<0.0.8.112>,{is_prime,28376591248,<0.72.0>}}
+** When Server state == 6
+** Reason for termination ==
+** {buuum,[{prime_tester_server,handle_info,2,
+                                [{file,"prime_tester_server.erl"},{line,63}]},
+           {gen_server,try_dispatch,4,[{file,"gen_server.erl"},{line,615}]},
+           {gen_server,handle_msg,5,[{file,"gen_server.erl"},{line,681}]},
+           {proc_lib,init_p_do_apply,3,[{file,"proc_lib.erl"},{line,240}]}]}
+
+=ERROR REPORT==== 7-Aug-2016::21:18:43 ===
+Worker <0.54.0> died. Reason:buuum. Remove from registry
+
+=ERROR REPORT==== 7-Aug-2016::21:18:43 ===
+Resend this worker tasks to other available workers. Tasks: [{#Ref<0.0.8.112>,
+                                                              {is_prime,
+                                                               28376591248,
+                                                               <0.72.0>}}]
+aa

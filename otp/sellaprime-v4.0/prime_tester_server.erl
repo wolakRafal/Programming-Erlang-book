@@ -62,9 +62,11 @@ handle_cast(_Request, N) ->
 handle_info({ _Ref, {is_prime, ?MAGIC_NUMBER, _From}}, _N) ->
   exit(buuum);
 
-handle_info({TaskId, {is_prime, P, From}}, N) ->
+handle_info(Msg={TaskId, {is_prime, P, From}}, N) ->
+  io:format("~p Received ~p ~n", [self(), Msg]),
   timer:sleep(300), %% delay for tests
   From ! (catch lib_primes:is_prime(P)),
+  io:format("~p job_done ~p ~n", [self(), Msg]),
   load_balancer ! {job_done, self(), TaskId},
   {noreply, N + 1};
 
@@ -119,6 +121,8 @@ crash_test() ->
   timer:sleep(300),
   {state, S2} = load_balancer:get_state(),
   %% work should be recovered and send to others
+  %% TODO : why worker restart is so delayed - occurs after tests finishes , should be done quicker.
+  %% Answer it waits in the queue and after two task is done 2x300ms then is processed -- need to change tests.
   io:format("State 2:~p~n", [S2]),
   3 = length([X || {X, {worker, X, L}} <- maps:to_list(S1), length(L) == 4]),
   pass.
